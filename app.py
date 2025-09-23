@@ -49,20 +49,26 @@ def get_item(item_id):
         return jsonify({"item": {"id": item.id, "name": item.name, "price": item.price}})
     return jsonify({"error": "Item not found"}), 404
 
-@app.route("/items", methods=["POST"])
-def create_item():
+@app.route("/items/<int:item_id>", methods=["POST"])
+def post_item_with_id(item_id):
     data = request.json
-    try:
-        item = Item(name=data["name"], price=data["price"])
-        db.session.add(item)
+    
+    item = Item.query.get(item_id)
+    
+    if item:
+        # Update existing item
+        item.name = data.get("name", item.name)
+        item.price = data.get("price", item.price)
         db.session.commit()
         return jsonify({
-            "message": "Item created",
+            "message": "Item updated",
             "item": {"id": item.id, "name": item.name, "price": item.price}
-        }), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "Failed to create item", "details": str(e)}), 500
+        }), 200
+    else:
+        # Optionally create new item with given ID if your DB supports it
+        # Otherwise return error:
+        return jsonify({"error": "Item not found"}), 404
+
 
 @app.route("/items/<int:item_id>", methods=["PUT"])
 def update_item(item_id):
