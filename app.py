@@ -64,16 +64,31 @@ def create_item():
         db.session.rollback()
         return jsonify({"error": "Failed to create item", "details": str(e)}), 500
 
-@app.route("/items/<int:item_id>", methods=["PUT"])
-def update_item(item_id):
-    item = Item.query.get(item_id)
-    if item:
-        data = request.json
-        item.name = data["name"]
-        item.price = data["price"]
+@app.route("/items", methods=["PUT"])
+def update_item_by_index():
+    data = request.json
+    try:
+        index = data.get("index")
+        if index is None:
+            return jsonify({"error": "Index is required when no ID is provided"}), 400
+
+        items = Item.query.order_by(Item.id).all()
+        if index < 0 or index >= len(items):
+            return jsonify({"error": "Index out of range"}), 404
+
+        item = items[index]
+        item.name = data.get("name", item.name)
+        item.price = data.get("price", item.price)
         db.session.commit()
-        return jsonify({"message": "Item updated", "item": data})
-    return jsonify({"error": "Item not found"}), 404
+
+        return jsonify({
+            "message": "Item updated by index",
+            "item": {"id": item.id, "name": item.name, "price": item.price}
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update item", "details": str(e)}), 500
 
 @app.route("/items/<int:item_id>", methods=["PATCH"])
 def patch_item(item_id):
